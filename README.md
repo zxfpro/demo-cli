@@ -26,18 +26,31 @@ demo config set app.name my-cli
 demo config set db.host 127.0.0.1
 ```
 
-## 2) GitHub Public 分发 + pip 安装
+## 2) GitHub/Gitee 安装
 
-把仓库公开后，用户可直接安装：
+安装最新版本：
 
 ```bash
-pip install "git+https://github.com/yourname/demo-cli.git"
+pip install -U "git+https://gitee.com/zhaoxuefeng199508/demo-cli.git"
 ```
 
-如果使用 tag（推荐）：
+安装稳定 tag（推荐）：
 
 ```bash
-pip install "git+https://gitee.com/zhaoxuefeng199508/demo-cli.git@v0.1.1"
+pip install -U "git+https://gitee.com/zhaoxuefeng199508/demo-cli.git@v1.0.0"
+```
+
+如果走 GitHub：
+
+```bash
+pip install -U "git+https://github.com/zxfpro/demo-cli.git@v1.0.0"
+```
+
+升级到最新：
+
+```bash
+pip install -U "git+https://gitee.com/zhaoxuefeng199508/demo-cli.git"
+demo version
 ```
 
 ## 3) 极简开发方式
@@ -121,4 +134,14 @@ python -m twine upload dist/*
 
 ```bash
 pip install demo-cli
+```
+
+## 9) 1.0.0 稳定版发布流程
+
+```bash
+git add .
+git commit -m "release: v1.0.0"
+git tag -a v1.0.0 -m "v1.0.0"
+git push origin main
+git push origin v1.0.0
 ```

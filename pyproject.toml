@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "demo-cli"
-version = "0.1.7"
+version = "1.0.0"
 description = "A minimal Python CLI starter built with Typer"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -25,9 +25,9 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourname/demo-cli"
-Repository = "https://github.com/yourname/demo-cli"
-Issues = "https://github.com/yourname/demo-cli/issues"
+Homepage = "https://github.com/zxfpro/demo-cli"
+Repository = "https://github.com/zxfpro/demo-cli"
+Issues = "https://github.com/zxfpro/demo-cli/issues"
 
 [project.scripts]
 demo = "demo_cli.cli:app"
