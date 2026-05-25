@@ -1,6 +1,7 @@
 import os
 from importlib.metadata import version as pkg_version
 from pathlib import Path
+import json
 
 import tomllib
 import typer
@@ -58,12 +59,13 @@ def _upsert_app_name(name: str) -> None:
         raise typer.BadParameter("value cannot be empty")
 
     CONFIG_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
-    content = f"""# demo-cli user config
-# This file is stored in your home directory and is not overwritten by package upgrades.
-
-[app]
-name = \"{safe_name.replace('\\', '\\\\').replace('"', '\\"')}\"
-"""
+    encoded_name = json.dumps(safe_name, ensure_ascii=False)
+    content = (
+        "# demo-cli user config\n"
+        "# This file is stored in your home directory and is not overwritten by package upgrades.\n\n"
+        "[app]\n"
+        f"name = {encoded_name}\n"
+    )
     CONFIG_PATH.write_text(content, encoding="utf-8")
     try:
         CONFIG_PATH.chmod(0o600)
