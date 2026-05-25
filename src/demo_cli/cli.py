@@ -11,6 +11,9 @@ def hello(name: str = typer.Argument("world")) -> None:
     """Say hello."""
     typer.echo(f"Hello, {name}!")
 
+@app.command()
+def add(x: int, y: int) -> None:
+    typer.echo(x + y)
 
 @app.command()
 def version() -> None:
