@@ -2,12 +2,14 @@ import os
 from importlib.metadata import version as pkg_version
 from pathlib import Path
 import json
+from copy import deepcopy
 
 import typer
 try:
     import tomllib  # Python 3.11+
 except ModuleNotFoundError:  # pragma: no cover
     import tomli as tomllib  # Python 3.10 and below
+import tomli_w
 
 app = typer.Typer(
     help="A minimal Typer-based CLI starter.",
@@ -43,17 +45,91 @@ def _env_value(env_name: str) -> str | None:
     return s if s else None
 
 
-def _get_app_name() -> str:
+def _deep_merge(base: dict, override: dict) -> dict:
+    result = deepcopy(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(result.get(key), dict):
+            result[key] = _deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+
+def _effective_config() -> dict:
     # Priority: defaults < config file < env var
-    name = DEFAULTS["app"]["name"]
-    file_cfg = _read_config_file()
-    file_name = file_cfg.get("app", {}).get("name") if isinstance(file_cfg.get("app"), dict) else None
-    if isinstance(file_name, str) and file_name.strip():
-        name = file_name.strip()
+    cfg = _deep_merge(DEFAULTS, _read_config_file())
     env_name = _env_value("DEMO_CLI_APP_NAME")
     if env_name is not None:
-        name = env_name
-    return name
+        cfg.setdefault("app", {})
+        if isinstance(cfg["app"], dict):
+            cfg["app"]["name"] = env_name
+    return cfg
+
+
+def _get_by_dotted(data: dict, dotted_key: str):
+    cur = data
+    for part in dotted_key.split("."):
+        if not isinstance(cur, dict) or part not in cur:
+            raise KeyError(dotted_key)
+        cur = cur[part]
+    return cur
+
+
+def _set_by_dotted(data: dict, dotted_key: str, value) -> None:
+    parts = dotted_key.split(".")
+    if any(not part for part in parts):
+        raise ValueError("invalid key")
+    cur = data
+    for part in parts[:-1]:
+        nxt = cur.get(part)
+        if nxt is None:
+            cur[part] = {}
+            nxt = cur[part]
+        if not isinstance(nxt, dict):
+            raise ValueError(f"cannot set child key under non-table: {part}")
+        cur = nxt
+    cur[parts[-1]] = value
+
+
+def _parse_value(raw: str):
+    text = raw.strip()
+    if text == "":
+        return ""
+    lowered = text.lower()
+    if lowered in {"true", "false"}:
+        return lowered == "true"
+    if lowered in {"null", "none"}:
+        return None
+    try:
+        if text.isdigit() or (text.startswith("-") and text[1:].isdigit()):
+            return int(text)
+        return float(text) if any(ch in text for ch in ".eE") else text
+    except ValueError:
+        pass
+    if (text.startswith("[") and text.endswith("]")) or (text.startswith("{") and text.endswith("}")):
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            return raw
+    return raw
+
+
+def _write_config_file(data: dict) -> None:
+    CONFIG_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
+    content = tomli_w.dumps(data)
+    CONFIG_PATH.write_text(content, encoding="utf-8")
+    try:
+        CONFIG_PATH.chmod(0o600)
+    except OSError:
+        pass
+
+
+def _get_app_name() -> str:
+    cfg = _effective_config()
+    value = cfg.get("app", {}).get("name") if isinstance(cfg.get("app"), dict) else DEFAULTS["app"]["name"]
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return DEFAULTS["app"]["name"]
 
 
 def _upsert_app_name(name: str) -> None:
@@ -61,19 +137,9 @@ def _upsert_app_name(name: str) -> None:
     if not safe_name:
         raise typer.BadParameter("value cannot be empty")
 
-    CONFIG_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
-    encoded_name = json.dumps(safe_name, ensure_ascii=False)
-    content = (
-        "# demo-cli user config\n"
-        "# This file is stored in your home directory and is not overwritten by package upgrades.\n\n"
-        "[app]\n"
-        f"name = {encoded_name}\n"
-    )
-    CONFIG_PATH.write_text(content, encoding="utf-8")
-    try:
-        CONFIG_PATH.chmod(0o600)
-    except OSError:
-        pass
+    data = _read_config_file()
+    _set_by_dotted(data, "app.name", safe_name)
+    _write_config_file(data)
 
 
 @app.command()
@@ -127,24 +193,35 @@ def config_show() -> None:
 
 
 @config_app.command("get")
-def config_get(key: str = typer.Argument(..., help="Config key, currently supports: app.name")) -> None:
-    """Read an effective config value (applies env override)."""
-    if key != "app.name":
-        typer.echo("Unsupported key. Supported keys: app.name")
+def config_get(key: str = typer.Argument(..., help="Config key, e.g. app.name")) -> None:
+    """Read an effective config value (supports dotted keys)."""
+    try:
+        value = _get_by_dotted(_effective_config(), key)
+    except KeyError:
+        typer.echo(f"Config key not found: {key}")
         raise typer.Exit(code=2)
-    typer.echo(_get_app_name())
+    if isinstance(value, (dict, list)):
+        typer.echo(json.dumps(value, ensure_ascii=False))
+    else:
+        typer.echo(str(value))
 
 
 @config_app.command("set")
 def config_set(
-    key: str = typer.Argument(..., help="Config key, currently supports: app.name"),
+    key: str = typer.Argument(..., help="Config key, e.g. app.name"),
     value: str = typer.Argument(..., help="Value to set"),
 ) -> None:
-    """Set a config value in ~/.demo-cli/config.toml."""
-    if key != "app.name":
-        typer.echo("Unsupported key. Supported keys: app.name")
+    """Set a config value in ~/.demo-cli/config.toml (supports dotted keys)."""
+    if not key or key.startswith(".") or key.endswith(".") or ".." in key:
+        typer.echo(f"Invalid key: {key}")
         raise typer.Exit(code=2)
-    _upsert_app_name(value)
+    data = _read_config_file()
+    try:
+        _set_by_dotted(data, key, _parse_value(value))
+    except ValueError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(code=2)
+    _write_config_file(data)
     typer.echo(f"Set {key}={value}")
 
 

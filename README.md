@@ -23,6 +23,7 @@ demo config init
 demo config show
 demo config get app.name
 demo config set app.name my-cli
+demo config set db.host 127.0.0.1
 ```
 
 ## 2) GitHub Public 分发 + pip 安装
@@ -87,7 +88,20 @@ DEMO_CLI_APP_NAME=prod demo hello Alice
 # [prod] Hello, Alice!
 ```
 
-## 6) 新增命令示例
+## 6) config set/get（通用键，不覆盖其他字段）
+
+- 支持点路径键：`a.b.c`
+- `set` 只更新目标键，不会清空你手工写的其他配置
+
+示例：
+
+```bash
+demo config set db.host 127.0.0.1
+demo config set db.port 3306
+demo config get db.host
+```
+
+## 7) 新增命令示例
 
 ```python
 @app.command()
@@ -95,7 +109,7 @@ def add(x: int, y: int) -> None:
     typer.echo(x + y)
 ```
 
-## 7) 可选：发布到 PyPI
+## 8) 可选：发布到 PyPI
 
 ```bash
 pip install build twine
