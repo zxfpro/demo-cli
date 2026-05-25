@@ -21,6 +21,8 @@ demo version
 demo config path
 demo config init
 demo config show
+demo config get app.name
+demo config set app.name my-cli
 ```
 
 ## 2) GitHub Public 分发 + pip 安装
@@ -66,7 +68,26 @@ demo config show
 
 说明：配置文件在用户主目录，`pip install -U` 升级包不会覆盖这个文件。
 
-## 5) 新增命令示例
+## 5) 配置优先级（默认 < 配置文件 < 环境变量）
+
+- 生效顺序：
+  - 默认值（代码内置）
+  - `~/.demo-cli/config.toml`
+  - 环境变量（最高优先级）
+- 当前支持环境变量：`DEMO_CLI_APP_NAME`
+
+示例：
+
+```bash
+demo config set app.name my-cli
+demo hello Alice
+# [my-cli] Hello, Alice!
+
+DEMO_CLI_APP_NAME=prod demo hello Alice
+# [prod] Hello, Alice!
+```
+
+## 6) 新增命令示例
 
 ```python
 @app.command()
@@ -74,7 +95,7 @@ def add(x: int, y: int) -> None:
     typer.echo(x + y)
 ```
 
-## 6) 可选：发布到 PyPI
+## 7) 可选：发布到 PyPI
 
 ```bash
 pip install build twine
