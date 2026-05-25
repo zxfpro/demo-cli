@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "demo-cli"
-version = "0.1.1"
+version = "0.1.2"
 description = "A minimal Python CLI starter built with Typer"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -29,6 +29,7 @@ Issues = "https://github.com/yourname/demo-cli/issues"
 
 [project.scripts]
 demo = "demo_cli.cli:app"
+"demo-cli" = "demo_cli.cli:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/demo_cli"]

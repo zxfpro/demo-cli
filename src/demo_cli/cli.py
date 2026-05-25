@@ -1,8 +1,10 @@
 import typer
+from importlib.metadata import version as pkg_version
 
 app = typer.Typer(
     help="A minimal Typer-based CLI starter.",
     no_args_is_help=True,
+    context_settings={"help_option_names": ["--help", "-h"]},
 )
 
 
@@ -18,9 +20,7 @@ def add(x: int, y: int) -> None:
 @app.command()
 def version() -> None:
     """Print CLI version."""
-    from demo_cli import __version__
-
-    typer.echo(__version__)
+    typer.echo(pkg_version("demo-cli"))
 
 
 if __name__ == "__main__":
