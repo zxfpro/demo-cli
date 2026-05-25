@@ -3,8 +3,11 @@ from importlib.metadata import version as pkg_version
 from pathlib import Path
 import json
 
-import tomllib
 import typer
+try:
+    import tomllib  # Python 3.11+
+except ModuleNotFoundError:  # pragma: no cover
+    import tomli as tomllib  # Python 3.10 and below
 
 app = typer.Typer(
     help="A minimal Typer-based CLI starter.",
